@@ -15,11 +15,14 @@ class GameState {
     private:
         ChessBoard boardState;
         bool threatened[8][8] = {false};
-        PieceColor currentTurn;
-        std::vector<Move> generateAllMoves(PieceColor color);
+        PieceColor currentTurn; 
     public:
-        void markThreats();
-        
+        std::vector<Move> generateAllMoves(PieceColor color);
+        void makeMove(Move& m);
+        void undoMove(Move& m);
+        int evaluate();
+        int minimax(int depth, bool isMaximizing, int alpha, int beta);
+        Move findBestMove(int depth);
 
 };
 

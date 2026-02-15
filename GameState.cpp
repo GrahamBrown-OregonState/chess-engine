@@ -128,3 +128,101 @@ std::vector<Move> GameState::generateAllMoves(PieceColor color) {
     
     return moves;
 }
+
+void GameState::makeMove(Move& m) {
+    Piece piece = boardState.getPiece(m.fromR, m.fromC);
+    m.captured = boardState.getPiece(m.toR, m.toC);
+    
+    boardState.setPiece(m.toR, m.toC, piece);
+    boardState.setPiece(m.fromR, m.fromC, {PieceType::NP, PieceColor::White});
+    
+    currentTurn = (currentTurn == PieceColor::White) ? PieceColor::Black : PieceColor::White;
+}
+
+void GameState::undoMove(Move& m) {
+    Piece piece = boardState.getPiece(m.toR, m.toC);
+    
+    boardState.setPiece(m.fromR, m.fromC, piece);
+    boardState.setPiece(m.toR, m.toC, m.captured);
+    
+    currentTurn = (currentTurn == PieceColor::White) ? PieceColor::Black : PieceColor::White;
+}
+
+int GameState::evaluate() {
+    // simple material count
+    int score = 0;
+    int values[] = {0, 100, 320, 330, 500, 900, 20000};  // NP, P, N, B, R, Q, K
+    
+    for (int r = 0; r < 8; r++) {
+        for (int c = 0; c < 8; c++) {
+            Piece p = boardState.getPiece(r, c);
+            if (p.pieceType == PieceType::NP) continue;
+            
+            int val = values[static_cast<int>(p.pieceType)];
+            score += (p.pieceColor == PieceColor::White) ? val : -val;
+        }
+    }
+    
+    return score;
+}
+
+int GameState::minimax(int depth, bool isMaximizing, int alpha, int beta) {
+    if (depth == 0) {
+        return evaluate();
+    }
+    
+    PieceColor color = isMaximizing ? PieceColor::White : PieceColor::Black;
+    std::vector<Move> moves = generateAllMoves(color);
+    
+    if (moves.empty()) {
+        // checkmate or stalemate - you'd check for check here
+        return isMaximizing ? -100000 : 100000;
+    }
+    
+    if (isMaximizing) {
+        int maxEval = -999999;
+        for (Move& m : moves) {
+            makeMove(m);
+            int eval = minimax(depth - 1, false, alpha, beta);
+            undoMove(m);
+            maxEval = std::max(maxEval, eval);
+            alpha = std::max(alpha, eval);
+            if (beta <= alpha) break;  // prune
+        }
+        return maxEval;
+    } else {
+        int minEval = 999999;
+        for (Move& m : moves) {
+            makeMove(m);
+            int eval = minimax(depth - 1, true, alpha, beta);
+            undoMove(m);
+            minEval = std::min(minEval, eval);
+            beta = std::min(beta, eval);
+            if (beta <= alpha) break;  // prune
+        }
+        return minEval;
+    }
+}
+
+Move GameState::findBestMove(int depth) {
+    std::vector<Move> moves = generateAllMoves(currentTurn);
+    Move bestMove;
+    bool isMaximizing = (currentTurn == PieceColor::White);
+    int bestEval = isMaximizing ? -999999 : 999999;
+    
+    for (Move& m : moves) {
+        makeMove(m);
+        int eval = minimax(depth - 1, !isMaximizing, -999999, 999999);
+        undoMove(m);
+        
+        if (isMaximizing && eval > bestEval) {
+            bestEval = eval;
+            bestMove = m;
+        } else if (!isMaximizing && eval < bestEval) {
+            bestEval = eval;
+            bestMove = m;
+        }
+    }
+    
+    return bestMove;
+}

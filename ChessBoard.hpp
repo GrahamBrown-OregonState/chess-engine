@@ -21,6 +21,5 @@ class ChessBoard {
         ChessBoard();
         void setPiece(int col, int row, Piece piece);
         Piece getPiece(int col, int row);
-        
 };
 #endif
